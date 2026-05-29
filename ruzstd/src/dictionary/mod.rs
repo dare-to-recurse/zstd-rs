@@ -133,9 +133,11 @@ pub fn create_raw_dict_from_source<R: io::Read, W: io::Write>(
     if source_size < 16 {
         let mut source = source;
         let mut buf = vec![];
-        source.read_to_end(&mut buf).expect("Could not read from source");
+        source
+            .read_to_end(&mut buf)
+            .expect("Could not read from source");
         output.write_all(&buf).expect("Could not write to output");
-        return
+        return;
     }
     vprintln!("create_dict: creating {dict_size} byte dict from {source_size} byte source");
     let mut buffered_source = BufReader::with_capacity(128_000, source);
