@@ -33,7 +33,6 @@ use cover::*;
 use std::{
     boxed::Box,
     collections::{BinaryHeap, HashMap},
-    dbg,
     fs::{self, File},
     io::{self, BufReader, Read},
     path::{Path, PathBuf},
@@ -131,15 +130,27 @@ pub fn create_raw_dict_from_source<R: io::Read, W: io::Write>(
     output: &mut W,
     dict_size: usize,
 ) {
+    if source_size < 16 {
+        let mut source = source;
+        let mut buf = vec![];
+        source.read_to_end(&mut buf).expect("Could not read from source");
+        output.write_all(&buf).expect("Could not write to output");
+        return
+    }
     vprintln!("create_dict: creating {dict_size} byte dict from {source_size} byte source");
     let mut buffered_source = BufReader::with_capacity(128_000, source);
 
-    let params = DictParams { segment_size: 2048 };
+    let params = DictParams {
+        segment_size: u32::min(2048, source_size as u32),
+    };
     let num_segments = source_size / params.segment_size as usize;
     // According to 4. Experiments - Varying Reservoir Sampler Thresholds,
     // setting reservoir size to collection size / min{collection size / (2 * number of segments),
     // 256} was effective
-    let sample_size = source_size / usize::min(source_size / (2 * num_segments), 256);
+    let sample_size = usize::max(
+        16,
+        source_size / usize::min(source_size / (2 * num_segments), 256),
+    );
     vprintln!("create_dict: creating {sample_size} byte sample of collection");
     let collection_sample = create_sample(&mut buffered_source, sample_size);
 
@@ -160,9 +171,9 @@ pub fn create_raw_dict_from_source<R: io::Read, W: io::Write>(
     };
     // Score each segment in the epoch and select the highest scoring segment
     // for the pool
-    while dbg!(buffered_source
+    while buffered_source
         .read(&mut current_epoch)
-        .expect("can read input"))
+        .expect("can read input")
         != 0
     {
         epoch_counter += 1;
@@ -185,5 +196,17 @@ pub fn create_raw_dict_from_source<R: io::Read, W: io::Write>(
         output
             .write_all(&segment.0.raw)
             .expect("can write to output");
+    }
+}
+
+#[test]
+fn create_raw_dict_from_source_no_panics_on_small_input() {
+    use std::io::Cursor;
+
+    for size in 0..1024 {
+        let input = vec![b'A'; size];
+        let mut output = Vec::new();
+
+        create_raw_dict_from_source(Cursor::new(input.clone()), input.len(), &mut output, 64);
     }
 }

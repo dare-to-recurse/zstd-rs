@@ -95,10 +95,8 @@ pub fn pick_best_segment(
 fn score_segment(ctx: &mut Context, collection_sample: &[u8], segment: &[u8]) -> usize {
     let mut segment_score = 0;
     // Determine the score of each overlapping k-mer
-    for i in 0..(segment.len() - K - 1) {
-        let kmer: &KMer = (&segment[i..i + K])
-            .try_into()
-            .expect("Failed to make kmer");
+    for window in segment.windows(K) {
+        let kmer: &KMer = window.try_into().expect("Failed to make kmer");
         // if the kmer is already in the pool, it recieves a score of zero
         if ctx.frequencies.contains_key(kmer) {
             continue;
