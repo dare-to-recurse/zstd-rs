@@ -6,7 +6,7 @@ Working directly on the `master` branch is forbidden. Branch protections are act
 
 ## Fuzzing Loop
 
-1. Launch fuzzing for all six fuzz targets in parallel from the `ruzstd` crate directory, using five jobs and five workers per target:
+1. Launch fuzzing for all six fuzz targets in parallel from the `ruzstd` crate directory, using five jobs and five workers per target. Always launch fuzzers outside of the sandbox. In Codex, request escalated execution for fuzzer launch commands so the fuzzer controller and worker processes are not killed by sandbox cleanup:
 
    ```bash
    cd ruzstd
@@ -74,7 +74,7 @@ Working directly on the `master` branch is forbidden. Branch protections are act
    git merge --ff-only origin/master
    ```
 
-12. Re-launch the fuzz target group that crashed with `-jobs=5 -workers=5`, then continue monitoring for the next discovered issue in any fuzz target group.
+12. Re-launch the fuzz target group that crashed outside of the sandbox with `-jobs=5 -workers=5`, then continue monitoring for the next discovered issue in any fuzz target group.
 
 ## Upstream Sync Requests
 
